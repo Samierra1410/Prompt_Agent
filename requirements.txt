@@ -1,0 +1,14 @@
+# Installed by the notebooks' first cell; listed here for reference.
+torch
+torch_geometric
+sentence-transformers
+scikit-learn
+numpy
+pandas
+matplotlib
+openai
+nest_asyncio
+langgraph
+networkx
+tabulate
+# Agent models are served locally with Ollama: llama3.1:8b, qwen2.5:7b
