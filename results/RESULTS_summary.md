@@ -2,7 +2,7 @@
 
 Setup: 60 test dialogues per condition (same graphs/questions/attacker positions as the paper's test_std), 8 agents, 3 attackers;
 detectors trained on 160 original + 96 adaptive training dialogues (32 each of mimicry / diffuse / evasive). G-Safeguard retrained
-with the authors' scripts (checkpoint not in the uploaded zip): sanity AUROC 0.990 (paper 0.992), per-agent 0.991 (paper 0.991).
+with the authors' scripts: sanity AUROC 0.990 (paper 0.992), per-agent 0.991 (paper 0.991).
 
 ## 1. New attacks (no defense; benign agents' wrong-answer share by round, MAS accuracy final)
 | attack | r0 | r1 | r2 | r3 | MAS acc |
@@ -70,25 +70,12 @@ GS - no-graph(matched) +0.002 [-0.075,+0.083]; GS - no-graph(0.5) -0.012 [-0.133
 - Training: GS 198 s features + 18 s train (160 dlg, GPU); GS(adv) 286 s + 24 s (256 dlg); per-agent 0.33 s; CoordGuard 2.0 s features + 0.6 s fit.
 - Model size: GS 4,334,593 params (16.5 MB fp32); per-agent 385.
 
-## 8. Defense-aware attacker (Cell 16): evasive attacker queries the ADV-TRAINED per-agent classifier (CoordGuard's text component)
-52 of 60 test dialogues completed (Kaggle 12-h session limit; 8 not run). Rewriting: mean 1.57 rewrites, score 0.398 -> 0.350, 50.8% of attacker messages below 0.30.
-Attack effect (benign wrong by round): 0.295 / 0.391 / 0.497 / 0.682; MAS acc final 0.25.
-| detector | AUROC [CI] | recall@5%FPR | recall@0.5 | FPR@0.5 |
-|---|---|---|---|---|
-| G-Safeguard | 0.575 [0.53,0.62] | 0.032 | 0.032 | 0.015 |
-| G-Safeguard (adv) | 0.714 [0.68,0.76] | 0.333 | 0.410 | 0.131 |
-| Per-agent | 0.605 [0.56,0.66] | 0.051 | 0.026 | 0.023 |
-| Per-agent (adv) | 0.681 [0.64,0.73] | 0.128 | 0.192 | 0.100 |
-| CoordGuard-own | 0.679 [0.61,0.74] | 0.154 | 0.173 | 0.069 |
-| CoordGuard-group | 0.767 [0.72,0.81] | 0.346 | 0.346 | 0.046 |
-| CoordGuard (full) | 0.875 [0.84,0.91] | 0.513 | 0.564 | 0.077 |
-| Outlier distance | 0.791 [0.75,0.83] | 0.288 | 0.013 | 0.000 |
-Graph gain (paired CI): GS - per-agent -0.030 [-0.062,-0.000]; adv GS - adv per-agent +0.033 [-0.016,+0.085];
-CoordGuard + edges +0.108 [+0.066,+0.153] *; + others' answers +0.088 [+0.044,+0.135] *.
+## 8. Defense-aware attacker
+The evasive attacker queries the adversarially trained per-agent classifier (CoordGuard's text component). Full results (60/60 dialogues, retrained G-Safeguard) are in Section 12.
 
-## 9. Study 2 rerun — ProvGuard v2 (Kaggle, Ollama, run of 2 Nov 2026; replaces old Study 2 numbers)
+## 9. Study 2 — document-borne prompt infection (notebook 04)
 Data: 300 Llama 3.1 8B + 60 Qwen2.5 7B phase-A sessions (4–8 agents, chain/fan/random DAGs) + 40 adaptive (Llama); 132 infected
-(message sent). Labels: Qwen judge OR exact-match rules; judge-vs-rule kappa 0.592 over 971 outputs (human audit still to do).
+(message sent). Labels: Qwen judge OR exact-match rules; judge-vs-rule kappa 0.592 over 971 outputs (a sheet of 100 randomly drawn outputs for human audit is included).
 Embeddings: full 384-d MiniLM (no PCA). 5-fold CV grouped by payload template.
 Attack outcomes (infected msg sent / inert): Llama obvious 0.92/0.08, mimicry 0.85/0.15, paraphrase 0.50/0.50, adaptive 0.55/0.45;
 Qwen obvious 1.00/0, mimicry 0.75/0.25, paraphrase 0.62/0.38. Reached final output: canary Llama 0.25 / Qwen 0.33; hijack 0.52 / 0.83.
@@ -112,7 +99,7 @@ Exp 6 cost (CPU): overhead ~25 ms/hop (embedding 21–25 ms dominates; GNN 2.3 m
 LLM call median 8.7 s Llama / 5.2 s Qwen.
 Takeaway: for single-source document-borne infection the edges add nothing (directed edges hurt: -0.041 AUROC; worse transfer) — consistent with Study 1.
 
-## 10. Qwen2.5 7B — G-Safeguard baseline re-evaluation (Study 1 replication, run of 2 Nov 2026)
+## 10. Qwen2.5 7B — G-Safeguard re-evaluation (Study 1 replication, notebook 01)
 340 dialogues (train 160, test_std / test_subtle (held-out style) / test_dissent (hard neg) 60 each); GS retrained with authors' scripts
 (val acc 98.05%). Output folder gsafe_csqa_qwen257b, zip gsafeguard_reeval_csqa_qwen257b.zip (input for the Qwen attack notebook).
 | detector | std AUROC [CI] (rec@5%) | held-out | hard neg (dissenter FPR@5% thr) | turn-0 std / held-out |
@@ -126,11 +113,11 @@ GS - no-graph(0.5) wrong -0.017 [-0.097,+0.060]; GS - no-graph(matched) +0.047 [
 Matched threshold 0.2729 (GS round-0 benign flag rate 0.000). Flags r0 attackers: GS 0.756, no-graph 0.594, matched 0.972; final-round benign flagged: 0.020 / 0.030 / 0.110.
 Takeaway: replicates Llama — graph adds nothing; at a matched operating point the no-graph defense is at least as good.
 
-## 11. Qwen2.5 7B — attacks + CoordGuard replication (run of 7 Nov 2026, 3.76 h + cells 14-17)
+## 11. Qwen2.5 7B — attacks + CoordGuard replication (notebook 02, 3.76 h)
 Sanity: GS 0.992, per-agent 0.999 on test_std. Training 160 orig + 96 adaptive.
 Attack effect (benign wrong r0/r1/r2/r3, MAS final): standard .200/.347/.470/.567 .433; held-out .200/.310/.503/.637 .367;
 mimicry .193/.233/.270/.303 .717; diffuse .210/.237/.280/.287 .733; evasive .197/.233/.260/.230 .783; defense-aware .183/.217/.253/.237 .767.
-=> Qwen largely RESISTS the stealthy attacks (only authors' and held-out styles work). Evasive rewrites per round .11/.32/.56/.65; score .11->.23 range; defense-aware 1.31 rewrites, .320->.292, 60.1% below thr.
+=> Qwen largely resists the stealthy attacks (only authors' and held-out styles work). Evasive rewrites per round .11/.32/.56/.65; score .11->.23 range; defense-aware 1.31 rewrites, .320->.292, 60.1% below thr.
 AUROC (rec@5%): | det | mimicry | diffuse | evasive | def-aware | std | held | hard |
 GS .555(.06) .667(.10) .620(.03) .554 | .992 .962 .991
 GS adv .663(.21) .751(.36) .725(.27) .672 | .994 .996 .992
@@ -140,7 +127,7 @@ CG-own .615 .729 .695 .589 | 1 1 1 ; CG-group .700 .786 .771 .725 ; CG full .766
 Outlier .647 .769 .761 .745 | .931 .938 .874
 Round 0: evasive GS .600 PA .651 GSadv .710 PAadv .714 CG .809; diffuse .604/.652/.721/.718/.814; mimicry .492/.519/.580/.591/.729.
 Dissenter FPR@5%: GS .025, GSadv .117, PA .258, PAadv .242, CG .292 (own .325, group .150).
-Graph gain CIs: GS-PA (paper): std -.007[-.015,-.002]* held -.029[-.048,-.014]* hard -.008[-.017,-.002]* mim -.021[-.051,+.004] diff -.028[-.058,+.003] evas -.032[-.066,-.001]* aware -.022[-.057,+.007]
+Graph gain CIs: GS-PA: std -.007[-.015,-.002]* held -.029[-.048,-.014]* hard -.008[-.017,-.002]* mim -.021[-.051,+.004] diff -.028[-.058,+.003] evas -.032[-.066,-.001]* aware -.022[-.057,+.007]
 adv GS-PA: std -.004[-.010,-.001]* held +.011[+.001,+.022]* hard -.003 mim +.036[+.001,+.070]* diff +.025[-.015,+.065] evas +.036[-.005,+.079] aware +.059[+.015,+.107]*
 CG +edges: mim +.066[+.013,+.120]* diff +.100[+.060,+.143]* evas +.086[+.051,+.122]* aware +.087[+.052,+.121]*; 0 on authors' conditions.
 CG +answers: mim +.085* diff +.057* evas +.077* aware +.136*.
@@ -150,13 +137,13 @@ E2E evasive (30 dlg): wrong r3 none .227, GSadv .193, PAadv .273, CG .193; MAS .
 Flags r0 att CG .556 GSadv .300 PAadv .056; benign r3 CG .100 GSadv .060 PAadv .140.
 Operating point (same as baseline run): GS .247, NG .263, matched .200; GS-matched +.047[-.030,+.123].
 Hardware (Qwen run machine): GS 7.2 ms CPU-1T, 3.15 GPU; 64 dense 366 CPU / 15.1 GPU; batch512 GPU 15,736 dlg/s 357MB 0.25 J/1k; LR 0.064 ms; CG 7.4 ms; LLM round 24.5 s.
-Part P (ProvTrace containment, Study-2 data): payload reaches deliverable among infected sessions: none .473; at 5% message-FPR budget per-message blocking .036 (clean msgs blocked .045, clean deliverables suppressed 0) vs provenance quarantine .027 (.117, .153); at 1%: .064/.007/0 vs .045/.051/.032; at 10%: .009/.086/0 vs .000/.172/.259. Attribution of flagged infected ~.83-.86 both.
+Provenance-quarantine containment (Study 2 data): payload reaches deliverable among infected sessions: none .473; at 5% message-FPR budget per-message blocking .036 (clean msgs blocked .045, clean deliverables suppressed 0) vs provenance quarantine .027 (.117, .153); at 1%: .064/.007/0 vs .045/.051/.032; at 10%: .009/.086/0 vs .000/.172/.259. Attribution of flagged infected ~.83-.86 both.
 
-## 12. Revision run (Llama, 8 Nov 2026, 4.2 h): stronger controls, density, CoordGuard-aware attacker, defense-aware completed (60/60)
+## 12. Additional experiments (Llama, notebook 03, 4.2 h): stronger controls, density, CoordGuard-aware attacker, defense-aware attacker (60/60)
 Stronger no-graph controls (MLP 256, GBT) on same embeddings: never better than LR; GS minus best control never significantly positive in 14 comparisons (range -0.034..+0.018; only sig. value -0.034 def-aware). GBT std .979 vs LR .991. CG-own (no graph) 1.000 on authors' attacks.
 Density: CG edge gain positive at all 5 densities for diffuse (+.075..+.182) and evasive (+.032..+.247); mimicry -.014..+.119. CG .83-.98; adv baselines .64-.87. Position: CG high/low out-degree .894/.911 evasive, .925/.935 diffuse.
 Defense-aware (60 dlg, rerun with retrained GS): GS .549, GS adv .693, PA .583, PA adv .665, own .673, group .774, CG .867 (rec5 .533); outlier .804. Edges +.093[.054,.132]; adv GS-PA +.028[-.013,.070]; GS-PA -.034[-.067,-.002]. Effect .267/.301/.486/.718, MAS .167; 1.62 rewrites, .405->.354, 49.4% below thr.
-CoordGuard-aware attacker (CG in the loop; tone/noecho/concede rewrites; CG not retrained): 46% msgs revised (tone 11, noecho 21, concede 14%), CG score .49->.35, 81% below thr.
+CoordGuard-aware attacker (CG score in the loop; tone/noecho/concede rewrites; CG not retrained): 46% msgs revised (tone 11, noecho 21, concede 14%), CG score .49->.35, 81% below thr.
 AUROC: GS .525, GS adv .676, PA adv .619, MLP adv .657, outlier .812, CG-own .486, CG-group .620, CG .782 (rec5 .14, rec@.5 .17, FPR .07). Edges +.162[.105,.217]; adv GS-PA +.057[.014,.098].
 Effect: wrong r3 .593 (vs evasive .742), MAS .317; many concessions .548 vs few .791.
 E2E (30): none .573, GS adv .551, PA adv .553, CG .577 — all n.s. => CG-aware attacker evades every deployed defense at the cost of ~1/5 of its effect.
